@@ -70,3 +70,13 @@ challenge-7_group3/
 ├── requirements.txt
 ├── CHECKLIST.md
 └── README.md
+```
+---
+# Authors
+Group #3
+David Buitrago 20221020085 //
+Cristian Cruz 202210200125 //
+Daniel Cuellar 20221020081
+
+
+Transfer Learning: Few-Shot Classification, Neural Style Transfer, and Domain Shift Adaptation
