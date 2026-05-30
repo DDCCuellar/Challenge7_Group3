@@ -140,8 +140,15 @@ def train_model(model, train_loader, optimizer, num_epochs, criterion):
 # =====================================================================
 
 if __name__ == '__main__':
-    print(f"Modelo ResNet-50 cargado en {device} siguiendo las especificaciones del PDF.")
-    # Descomentar una vez tengas las imágenes en las carpetas:
-    # train_loader, val_loader, test_loader = get_few_shot_loaders("./data/DomainNet/real")
-    # print("Entrenando Feature Extraction...")
-    # train_model(model, train_loader, optimizer, num_epochs, criterion)
+    SEED = 42
+    set_seed(SEED)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    REAL_DATA_DIR = "./data/DomainNet/real"
+
+    train_loader, val_loader, test_loader = get_few_shot_loaders(REAL_DATA_DIR)
+
+    print("--- ENTRENANDO FEATURE EXTRACTION ---")
+    train_model(model, train_loader, optimizer, num_epochs=25, criterion=criterion)
+
+    torch.save(model.state_dict(), "./checkpoints/resnet50_feature_extraction.pth")
