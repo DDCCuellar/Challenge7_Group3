@@ -267,6 +267,7 @@ if __name__ == '__main__':
         print("Resultado tras Target Fine-Tuning:")
         evaluar_modelo(model_ft, tgt_test_loader, "Target Test (Estrategia 2)")
 
+
         # Clonamos de nuevo para evaluar el impacto de tus imágenes sintéticas (Estrategia 3)
         if mixed_loader is not None:
             model_aug = models.resnet50()

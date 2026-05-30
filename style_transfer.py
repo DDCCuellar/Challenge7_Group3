@@ -63,6 +63,7 @@ class StyleContentLoss(nn.Module):
         # Copiamos la imagen inicial para pasarla capa por capa por la VGG-19
         features_xt = x.clone().contiguous()
 
+
         for name, layer in self.vgg.features.named_children():
             features_xt = layer(features_xt)
 
