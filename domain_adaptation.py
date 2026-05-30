@@ -11,6 +11,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.manual_seed(42)  # Recordar reportar la media/std sobre 3 semillas distintas en la entrega
 
 
+
 # =====================================================================
 # LISTING 3: GRADIENT REVERSAL Y DANN (Copiado y completado del PDF)
 # =====================================================================

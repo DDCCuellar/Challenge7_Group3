@@ -8,6 +8,7 @@ import os
 
 
 
+
 def configurar_directorios():
     # Definimos la ruta base del proyecto
     base_dir = "."
