@@ -13,7 +13,7 @@ def get_model(num_classes=6, mode='feature_extraction'):
     model = models.resnet50(weights=weights)
 
     if mode == 'feature_extraction':
-        # 1. Extracción de características: Congelamos todo el backbone
+        # 1. Extracción de características: Congelamostodo el backbone
         for param in model.parameters():
             param.requires_grad = False
 
