@@ -29,15 +29,13 @@ ResNet-50
 ## Metrics
 | Model | Source Accuracy | Target Accuracy | Δshift |
 |---------|---------|---------|---------|
-| Feature Extraction | | | |
-| Fine-Tuning | | | |
-| No Adaptation | | | |
-| Target Fine-Tuning | | | |
-| Style Transfer Augmentation | | | |
+| Feature Extraction |82.33% |59.78% |22.56 |
+| Fine-Tuning | |73.29% | |
+| Style Transfer Augmentation | |68.59% | |
 
 ## Neural Style Transfer
-Alpha:
-Beta:
+Alpha:1 but 100 have better result
+Beta:1e4
 
 ## Best Adaptation Strategy
 (To be completed after experiments)
