@@ -76,7 +76,7 @@ class StyleContentLoss(nn.Module):
         return content_loss, style_loss
 
 # --- FUNCIÓN PRINCIPAL DE OPTIMIZACIÓN (L-BFGS) ---
-def run_style_transfer(content_image, style_image, num_steps=100, alpha=1.0, beta=1e4):
+def run_style_transfer(content_image, style_image, num_steps=100, alpha=1.0, beta=1e3):
     # Cargar VGG-19 en modo evaluación y congelar parámetros
     # DESPUÉS
     vgg = models.vgg19(weights=models.VGG19_Weights.DEFAULT).to(device).eval()
@@ -160,7 +160,7 @@ if __name__ == '__main__':
     OUTPUT_BASE_DIR = "./data/synthetic_target"
 
     # 2. Las 6 clases asignadas exclusivamente al Grupo 3
-    clases_grupo3 = ["beach", "bridge", "forest", "mountain", "river", "tree"]
+    clases_grupo3 = [ "beach", "bridge","forest", "mountain", "river", "tree"]
 
     # Presupuesto solicitado por el documento: 30 imágenes por clase = 180 imágenes en total
     IMAGENES_POR_CLASE = 30
@@ -207,7 +207,7 @@ if __name__ == '__main__':
             ruta_estilo = os.path.join(clase_style_dir, nombre_pintura)
 
             # Definir el nombre del archivo de salida según un estándar limpio
-            nombre_salida = f"synthetic_{clase}_{i + 1:02d}.png"
+            nombre_salida = f"synthetic_{clase}_{i + 1:02d}V2.png"
             ruta_salida = os.path.join(clase_out_dir, nombre_salida)
 
             # Omitir si la imagen ya fue generada previamente (útil por si se corta la luz o el proceso)
@@ -230,7 +230,7 @@ if __name__ == '__main__':
                     img_contenido,
                     img_estilo,
                     num_steps=100,
-                    alpha=1.0,
+                    alpha=100.0,
                     beta=1e4
                 )
 

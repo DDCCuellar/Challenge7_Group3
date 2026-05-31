@@ -214,65 +214,99 @@ if __name__ == '__main__':
         Subset(datasets.ImageFolder(root=PAINTING_DIR, transform=val_test_transform), idx_tgt_test), batch_size=32,
         shuffle=False)
 
-    # Cargar tus 180 imágenes sintéticas generadas en la Parte B
-    try:
-        dataset_synthetic = datasets.ImageFolder(root=SYNTHETIC_DIR, transform=train_transform)
-        # Combinar las 300 fotos reales de entrenamiento + 180 imágenes estilizadas (Estrategia 3)
-        dataset_mixto = ConcatDataset(
-            [Subset(datasets.ImageFolder(root=REAL_DIR, transform=train_transform), idx_src_train), dataset_synthetic])
-        mixed_loader = DataLoader(dataset_mixto, batch_size=32, shuffle=True)
-        print(f"-> Dataset aumentado creado con éxito: {len(dataset_mixto)} imágenes totales.")
-    except Exception as e:
-        print("Nota: No se pudo cargar la carpeta sintética completa aún. Asegúrate de correr la Parte B antes.")
-        mixed_loader = None
+    # --- ENFOQUE ADAPTATIVO SEGURO PARA ESTRATEGIA 3 ---
+    mixed_loader = None
+    if os.path.exists(SYNTHETIC_DIR):
+        # Escaneamos cuáles carpetas dentro de synthetic_target SÍ tienen fotos adentro
+        formatos_validos = ('.jpg', '.jpeg', '.png', '.bmp')
+        clases_con_contenido = []
+
+        for d in os.listdir(SYNTHETIC_DIR):
+            path_d = os.path.join(SYNTHETIC_DIR, d)
+            if os.path.isdir(path_d):
+                archivos = [f for f in os.listdir(path_d) if f.lower().endswith(formatos_validos)]
+                if len(archivos) > 0:
+                    clases_con_contenido.append(d)
+
+        print(f"-> Clases sintéticas con imágenes listas encontradas: {clases_con_contenido}")
+
+        if len(clases_con_contenido) > 0:
+            try:
+                # Cargamos de forma segura pasando la función lambda para filtrar subcarpetas vacías
+                dataset_synthetic = datasets.ImageFolder(
+                    root=SYNTHETIC_DIR,
+                    transform=train_transform,
+                    is_valid_file=lambda path: os.path.basename(os.path.dirname(path)) in clases_con_contenido
+                )
+
+                # Sincronizamos las clases del dataset sintético limitado con el original para evitar desalineamiento
+                dataset_synthetic.classes = clases_con_contenido
+
+                # Filtramos el origen (Real) para acoplar solo las clases listas para la mezcla de aumento
+                idx_src_filtrado = []
+                for c_name in clases_con_contenido:
+                    c_idx_original = clases.index(c_name)
+                    indices_c = np.where(targets_real == c_idx_original)[0]
+                    np.random.shuffle(indices_c)
+                    idx_src_filtrado.extend(indices_c[:50])
+
+                subset_real_filtrado = Subset(datasets.ImageFolder(root=REAL_DIR, transform=train_transform),
+                                              idx_src_filtrado)
+
+                # Combinamos los conjuntos mixtos
+                dataset_mixto = ConcatDataset([subset_real_filtrado, dataset_synthetic])
+                mixed_loader = DataLoader(dataset_mixto, batch_size=32, shuffle=True)
+                print(f"Dataset aumentado parcial configurado con éxito ({len(dataset_mixto)} imágenes totales).")
+            except Exception as e:
+                print(f" Nota de omisión: Modificando cargadores para saltar error -> {str(e)}")
+        else:
+            print("No hay imágenes dentro de ninguna carpeta en synthetic_target. Estrategia 3 omitida.")
 
     # -----------------------------------------------------------------
     # EXPERIMENTO 1: MEDIR EL DOMAIN SHIFT PENALTY (Baseline)
     # -----------------------------------------------------------------
     print("\n=== MEDICIÓN DEL DOMAIN SHIFT PENALTY ===")
 
-    # Recreamos la arquitectura de la Parte A para cargar sus pesos guardados
     base_model = models.resnet50()
     base_model.fc = nn.Linear(base_model.fc.in_features, 6)
 
     ruta_checkpoint = "./checkpoints/resnet50_feature_extraction.pth"
     if os.path.exists(ruta_checkpoint):
-        base_model.load_state_dict(torch.load(ruta_checkpoint, map_view=device))
+        # ¡CORREGIDO!: Se cambió 'map_view' por 'map_location' para evitar el colapso
+        base_model.load_state_dict(torch.load(ruta_checkpoint, map_location=device))
         base_model.to(device)
         print("-> Pesos de la Parte A cargados con éxito.")
 
-        # Evaluar en origen vs destino para calcular la Ecuación (4)
         acc_source = evaluar_modelo(base_model, src_test_loader, "Source (Real Photos)")
         acc_target = evaluar_modelo(base_model, tgt_test_loader, "Target (Painting Benchmark)")
 
-        # Delta shift = Acc_source - Acc_target
         delta_shift = acc_source - acc_target
         print(f"Domain Shift Penalty (\u0394_shift): {delta_shift:.2f}% de pérdida de precisión.")
     else:
-        print("No se encontró el checkpoint de la Parte A en ./checkpoints/. Corre classifier.py primero.")
+        print(f"No se encontró el checkpoint en {ruta_checkpoint}. Corre primero classifier.py.")
 
     # -----------------------------------------------------------------
-    # EXPERIMENTO 2: EJECUTAR ADAPTACIONES (Si los loaders están listos)
+    # EXPERIMENTO 2: EJECUTAR ADAPTACIONES
     # -----------------------------------------------------------------
     criterion = nn.CrossEntropyLoss()
 
     if os.path.exists(ruta_checkpoint):
-        # Clonamos el modelo base para aplicar la Estrategia 2 sin alterar los pesos originales
+        print("\n=== EJECUTANDO ESTRATEGIAS DE ADAPTACIÓN ===")
+        # Estrategia 2: Target Fine-Tuning
         model_ft = models.resnet50()
         model_ft.fc = nn.Linear(model_ft.fc.in_features, 6)
-        model_ft.load_state_dict(torch.load(ruta_checkpoint))
+        model_ft.load_state_dict(torch.load(ruta_checkpoint, map_location=device))
         model_ft.to(device)
 
         train_target_finetuning(model_ft, tgt_train_loader, criterion)
         print("Resultado tras Target Fine-Tuning:")
         evaluar_modelo(model_ft, tgt_test_loader, "Target Test (Estrategia 2)")
 
-
-        # Clonamos de nuevo para evaluar el impacto de tus imágenes sintéticas (Estrategia 3)
+        # Estrategia 3: Style-Transfer Augmentation
         if mixed_loader is not None:
             model_aug = models.resnet50()
             model_aug.fc = nn.Linear(model_aug.fc.in_features, 6)
-            model_aug.load_state_dict(torch.load(ruta_checkpoint))
+            model_aug.load_state_dict(torch.load(ruta_checkpoint, map_location=device))
             model_aug.to(device)
 
             train_style_augmentation(model_aug, mixed_loader, criterion)
