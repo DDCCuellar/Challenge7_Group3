@@ -35,6 +35,7 @@ ResNet-50
 
 ## Neural Style Transfer
 Alpha:1 but 100 have better result
+
 Beta:1e4
 
 ## Best Adaptation Strategy
